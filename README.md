@@ -28,20 +28,15 @@ This is the well-known ["Fake and Real News Dataset"](https://www.kaggle.com/dat
 | Logistic Regression | ~99.4% |
 | Naive Bayes | ~94.5% |
 
-## ⚠️ Why the accuracy is ~99% — this is a dataset artifact, not a solved NLP problem
+## Understanding the ~99% Accuracy
 
-These scores look impressive, but they're inflated by systematic differences between the two CSV files that have nothing to do with whether an article is actually true or false:
+The high scores reached here (up to ~99.9% for XGBoost) are a good illustration of how well TF-IDF combined with classic ML models can separate two text sources — but part of this performance comes from characteristics of the dataset itself rather than from the models learning to reason about truthfulness in a general sense. It's worth analyzing where this signal comes from:
 
-- **Source fingerprint**: almost every article in `True.csv` starts with an agency dateline, e.g. `"WASHINGTON (Reuters) - ..."`, `"SEATTLE/WASHINGTON (Reuters) - ..."`. None of the `Fake.csv` articles have this pattern. A model can learn to spot the string `"(Reuters)"` alone and get most of the way to 99% — it's classifying *writing style / source*, not *truthfulness*.
-- **Disjoint `subject` categories**: `True.csv` only contains `politicsNews` and `worldnews`, while `Fake.csv` only contains `News`, `politics`, `left-news`, `Government News`, `US_News`, and `Middle-east`. The two classes never share a subject label, so `subject` alone is close to a perfect predictor and leaks directly into the TF-IDF features (subject-related vocabulary, formatting, etc.).
-- **Different collection process**: the two files were scraped from different sources/time periods, which introduces other stylistic and formatting artifacts (punctuation habits, capitalization, article length, boilerplate) that a bag-of-words/TF-IDF model latches onto easily.
+- **Source fingerprint**: most `True.csv` articles begin with an agency dateline, e.g. `"WASHINGTON (Reuters) - ..."`, which doesn't appear in `Fake.csv`. This gives the model an easy, reliable cue tied to the article's origin rather than its content.
+- **Disjoint `subject` categories**: `True.csv` only contains `politicsNews` and `worldnews`, while `Fake.csv` uses a different set entirely (`News`, `politics`, `left-news`, `Government News`, `US_News`, `Middle-east`). Since the two classes never share a subject label, this field (and the vocabulary tied to it) becomes a strong, almost direct predictor once vectorized.
+- **Different collection process**: the two files were gathered from different sources and periods, which naturally introduces stylistic differences (formatting, punctuation, article length) that TF-IDF picks up on easily.
 
-In short, the models aren't learning to detect *misinformation* — they're learning to detect *which of the two source files a snippet of text came from*. That's a much easier task than genuine fake-news detection, which is why even simple linear models cross 99%, and it's also why this result wouldn't generalize to real-world, out-of-distribution news text.
-
-**To get a more honest measure of performance**, this pipeline could be extended to:
-- Strip source-identifying boilerplate (agency datelines) before training.
-- Drop or balance the `subject` column so it can't act as a shortcut.
-- Test on a separate, independently collected fake/real news dataset (out-of-distribution evaluation).
+In other words, the models are very effective at distinguishing *these two specific sources of text*, and that's exactly what the dataset makes easiest to learn. This is a common and well-documented characteristic of this particular dataset, and it doesn't take away from the value of the exercise — building the full pipeline, comparing models, and tuning hyperparameters. It does mean the ~99% figure should be read as "near-perfect separation of these two sources," not "near-perfect fake-news detection in general."
 
 ## Requirements
 
